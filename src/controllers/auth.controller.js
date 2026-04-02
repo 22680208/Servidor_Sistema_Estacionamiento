@@ -1,4 +1,4 @@
-import User from '../models/user.js';
+import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
@@ -94,7 +94,6 @@ export const renovarToken = async (req, res) => {
         const nuevoToken = generarToken(user._id);
         return res.json({ token: nuevoToken });
     } catch (error) {
-        console.error(error);
         return res.status(403).json({ message: 'Token de refresco inválido' });
     }
 };

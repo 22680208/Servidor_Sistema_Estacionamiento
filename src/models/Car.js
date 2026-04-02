@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 const carSchema = new mongoose.Schema({
     userId: { 
         type: mongoose.Schema.Types.ObjectId, 
@@ -11,12 +13,17 @@ const carSchema = new mongoose.Schema({
     },
     model: { 
         type: String, 
+        required: true,
+        enum: ['Sedan', 'SUV', 'Pickup', 'Van', 'Coupe', 'Convertible', 'Hatchback', 'Wagon', 'Other']
+    },  
+    brand: { 
+        type: String, 
         required: true 
     },
     color: { 
-        type: String 
+        type: String
     },
-    esPrincipal: { 
+    isMain: { 
         type: Boolean, 
         default: false 
     }

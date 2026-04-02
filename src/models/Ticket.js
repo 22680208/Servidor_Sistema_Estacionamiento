@@ -10,7 +10,14 @@ const ticketSchema = new mongoose.Schema({
         unique: true,
         default: () => `TK-${nanoid()}`
     },
-    lugarId: { 
+    code: {
+        type: String,
+        required: true,
+        unique: true,
+        uppercase: true,
+        default: () => nanoid()
+    },
+    placeId: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Place', 
         required: true 
@@ -28,7 +35,8 @@ const ticketSchema = new mongoose.Schema({
         ref: 'Reservation'
     },
     timeStart: { 
-        type: Date, 
+        type: Date,
+        required: true,
         default: Date.now 
     },
     timeEnd: { 
@@ -39,13 +47,34 @@ const ticketSchema = new mongoose.Schema({
         enum: ['activo', 'pendiente_pago', 'pagado', 'finalizado'], 
         default: 'activo' 
     },
-    fee: {
-        totalCost: { type: Number, default: 0 },
-        paid: { type: Boolean, default: false }
+    baseFee: {
+        type: Number,
+        default: 50.00
     },
-    code: { 
-        type: String
+    finalFee: {
+        type: Number,
+        default: 0.00
+    },
+    discountType: {
+        type: String,
+        enum: ['estandar', 'desvalidado', 'premium'],
+        default: 'estandar'
+    },
+    validadoEnEntrada: {
+        type: Boolean,
+        default: false
+    },
+    validadoEnSalida: {
+        type: Boolean,
+        default: false
+    },
+    expiresAt: {
+        type: Date
     }
 }, { timestamps: true });
+
+ticketSchema.index({ code: 1 }, { unique: true });
+ticketSchema.index({ state: 1 });
+ticketSchema.index({ timeStart: 1, timeEnd: 1 });
 
 export default mongoose.model('Ticket', ticketSchema);
