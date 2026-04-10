@@ -1,13 +1,14 @@
+import mongoose from 'mongoose';
+
 const placeSchema = new mongoose.Schema({
     number: { 
-        type: Number, 
-        required: true, 
-        unique: true 
+        type: String, 
+        required: true,
     },
     sensorId: { 
-        type: String, 
-        required: true, 
-        unique: true 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Sensor', 
+        required: true 
     }, 
     state: { 
         type: String, 
@@ -18,10 +19,6 @@ const placeSchema = new mongoose.Schema({
         type: String, 
         enum: ['estandar', 'discapacitados'], 
         default: 'estandar' 
-    },
-    lastDistance: { 
-        type: Number, 
-        default: 0 
     }
 }, { timestamps: true });
 

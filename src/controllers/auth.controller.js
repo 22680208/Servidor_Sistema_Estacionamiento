@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
 const generarToken = (userId) => {
-    return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '1h' });
-};
+    return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '3h' });
+};  
 
 const generarRefreshToken = (userId) => {
     return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '7d' });

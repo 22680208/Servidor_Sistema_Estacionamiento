@@ -4,6 +4,7 @@ import { connectDB } from './src/config/db.js';
 import authRoute from './src/routes/auth.route.js';
 import reservationRoute from './src/routes/reservation.route.js';
 import carRoute from './src/routes/car.route.js';
+import placeRoute from './src/routes/place.route.js';
 import 'dotenv/config';
 
 connectDB();
@@ -15,4 +16,5 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoute);
 app.use('/api/reservation', reservationRoute);
 app.use('/api/car', carRoute);
+app.use('/api/place', placeRoute);
 export default app;
