@@ -16,21 +16,22 @@ const reservationSchema = new mongoose.Schema({
         ref: 'Car', 
         required: true 
     },
+    code: {
+        type: Number,
+        unique: true
+    },
     timeStart: { 
         type: Date, 
         required: true 
     },
     timeEnd: { 
-        type: Date 
+        type: Date,
+        required: true  
     },
     state: { 
         type: String, 
         enum: ['pendiente', 'activa', 'completada', 'cancelada'], 
         default: 'pendiente' 
-    },
-    totalCost: { 
-        type: Number, 
-        default: 0 
     }
 }, { timestamps: true });
 

@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
 const generarToken = (userId) => {
-    return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '3h' });
+    return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '1d' });
 };  
 
 const generarRefreshToken = (userId) => {
@@ -29,8 +29,6 @@ export const login = async (req, res) => {
             user: {
                 id: user._id,
                 nombre: user.nombre,
-                email: user.email,
-                role: user.role
             }
         });
     } catch (error) {
@@ -60,9 +58,12 @@ export const register = async (req, res) => {
         newUser.refreshToken = refreshToken;
         await newUser.save();
         return res.status(201).json({
-            message: 'Usuario registrado exitosamente',
             token,
-            refreshToken
+            refreshToken,
+            user: {
+                id: newUser._id,
+                nombre: newUser.nombre,
+            }
         });
     } catch (error) {
         console.error(error);

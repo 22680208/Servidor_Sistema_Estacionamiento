@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { customAlphabet } from 'nanoid';
 
-const nanoid = customAlphabet('1234567890ABCDEF', 6);
+const nanoid = customAlphabet('1234567890', 6);
 
 const ticketSchema = new mongoose.Schema({
     folio: { 
