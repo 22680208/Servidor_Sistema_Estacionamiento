@@ -65,10 +65,37 @@ export const initReservationWorker = () => {
 			}
 
 			if (job.name === 'cancel-reservation') {
+				const { reservationId, placeId } = job.data;
+				try {
+					const reservation = await Reservation.findById(reservationId);
+					if (!reservation) {
+						console.log(`[Worker] Tarea abortada: No existe la reserva ${reservationId}`);
+						return;
+					}
+					if (reservation.state === 'pendiente') {
+						console.log(`[Worker] Reserva canceladda con id: ${reservationId}`);
+
+						await Promise.all([
+							Reservation.findByIdAndUpdate(reservationId, { state: 'cancelada' }),
+							Place.findByIdAndUpdate(placeId, { state: 'disponible' })
+						]);
+
+						console.log(`[Worker] Lugar ${placeId} liberado y reserva finalizada.`);
+					} else {
+					console.log(`[Worker] La reserva ${reservationId} está en estado '${reservation.state}', no se cancela.`);
+					}
+				} catch (error) {
+					console.error(`[Worker] Error procesando cancelación: ${error.message}`);
+					throw error; 
+				}
+			}
+
+			if (job.name === 'finished-reservation') {
+				const { reservationId } = job.data;
 				try {
 					
 				} catch (error) {
-					console.error(`[Worker] Error procesando cancelación: ${error.message}`);
+					console.error(`[Worker] Error procesando finalizacion: ${error.message}`);
 					throw error; 
 				}
 			}

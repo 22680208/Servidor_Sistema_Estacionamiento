@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { customAlphabet } from 'nanoid';
 
-const nanoid = customAlphabet('1234567890', 6);
+const nanoid = customAlphabet('1234567890ABCDEF', 8);
 
 const ticketSchema = new mongoose.Schema({
     folio: { 
@@ -10,12 +10,9 @@ const ticketSchema = new mongoose.Schema({
         unique: true,
         default: () => `TK-${nanoid()}`
     },
-    code: {
-        type: String,
-        required: true,
-        unique: true,
-        uppercase: true,
-        default: () => nanoid()
+   code: {
+        type: Number,
+        unique: true
     },
     placeId: { 
         type: mongoose.Schema.Types.ObjectId, 
@@ -48,11 +45,11 @@ const ticketSchema = new mongoose.Schema({
         default: 'activo' 
     },
     baseFee: {
-        type: Number,
-        default: 50.00
+        type: mongoose.Schema.Types.Decimal128,
+        default: 150.00
     },
     finalFee: {
-        type: Number,
+        type: mongoose.Schema.Types.Decimal128,
         default: 0.00
     },
     discountType: {
@@ -60,21 +57,14 @@ const ticketSchema = new mongoose.Schema({
         enum: ['estandar', 'desvalidado', 'premium'],
         default: 'estandar'
     },
-    validadoEnEntrada: {
+    validationIn: {
         type: Boolean,
         default: false
     },
-    validadoEnSalida: {
+    validationOut: {
         type: Boolean,
         default: false
-    },
-    expiresAt: {
-        type: Date
     }
 }, { timestamps: true });
-
-ticketSchema.index({ code: 1 }, { unique: true });
-ticketSchema.index({ state: 1 });
-ticketSchema.index({ timeStart: 1, timeEnd: 1 });
 
 export default mongoose.model('Ticket', ticketSchema);

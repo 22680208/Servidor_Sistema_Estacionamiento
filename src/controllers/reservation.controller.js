@@ -2,6 +2,7 @@ import { Queue } from 'bullmq';
 import Reservation from '../models/Reservation.js';
 import Place from '../models/Place.js';
 import redisConnection from '../config/redis.js';
+import { ticketReservation } from '../utils/ticket.js'
 
 const reservationQueue = new Queue('reservation-queue', { connection: redisConnection });
 
@@ -25,9 +26,18 @@ export const createReservation = async (req, res) => {
         const timeStart = new Date().toISOString();
         const timeEnd = addMinutes(timeStart, time);
 
-        const existing = await Place.findOne({ placeId: placeId, state: 'ocupado' });
-        if (existing) {
-            return res.status(400).json({ message: 'Este lugar ya no está disponible' });
+        const place = await Place.updateOne({ 
+            _id: placeId, 
+            state: 'disponible'
+        },
+        {
+            $set: {
+                state: 'ocupado'
+            }
+        });
+
+        if (place.modifiedCount === 0) {
+            return res.status(400).json({ status: 'error', data: null, message: 'Este lugar ya no está disponible'});
         }
 
         const timeReservation = new Date(timeEnd).getTime() - Date.now();
@@ -60,7 +70,6 @@ export const createReservation = async (req, res) => {
 
         return res.status(202).json({ status: 'success', data: null, message: 'Reserva creada correctamente' });
     } catch (error) {
-        console.error(error);
         return res.status(500).json({ status: 'error', data: null, message: 'Error al crear la reserva' });
     }
 }
@@ -101,7 +110,7 @@ export const adjustReservation = async (req, res) => {
         return res.status(200).json({ 
             status: 'success',
             data: null,
-            message: 'Delay ajustado' 
+            message: 'tiempo ajustado' 
         });
 
     } catch (error) {
@@ -117,5 +126,85 @@ export const getReservations = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 'error', data: null, message: 'Error al obtener las reservas' });
+    }
+}
+
+export const deleteResertvation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const reservation = await Reservation.findById(id);
+        if (!reservation) {
+            return res.status(404).json({ status: 'error', message: 'Reserva no encontrada' });
+        }
+        await reservationQueue.add('cancel-reservation', { 
+            reservationId: id,
+            placeId: reservation.placeId
+        });
+        const jobId = `auto-cancel-${id}`; 
+        const reservationWorker = await reservationQueue.getJob(jobId);
+        if (reservationWorker) await reservationWorker.remove();
+        return res.status(200).json({ status: 'success', data: null, message: 'Reserva eliminada correctamente'});
+    } catch (error) {
+        return res.status(500).json({ status: 'error', data: null, message: 'Error al eliminar la reserva' });
+    }
+}
+
+export const getCodeReservation = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const reservation = await Reservation.findById(id)
+        if (!reservation) {
+            return res.status(404).json({ status: 'error', message: 'Reserva no encontrada' });
+        }
+        return res.status(200).json({ status: 'success', data: reservation.code, message: 'Codigo de reserva encontrado' });
+    } catch (error) {
+        return res.status(500).json({ status: 'error', data: null, message: 'Error al obtener el codigo'})
+    }
+}
+
+export const validationReservation = async (req, res) => {
+    try {
+        const { code } = req.params;
+        const ahora = new Date();
+
+        const startOfDay = new Date(Date.UTC(
+            ahora.getUTCFullYear(), 
+            ahora.getUTCMonth(), 
+            ahora.getUTCDate(), 
+            0, 0, 0, 0
+        ));
+
+        const endOfDay = new Date(Date.UTC(
+            ahora.getUTCFullYear(), 
+            ahora.getUTCMonth(), 
+            ahora.getUTCDate(), 
+            23, 59, 59, 999
+        ));
+
+        const reservation = await Reservation.findOne({
+        code: code,
+        createdAt: {
+            $gte: startOfDay,
+            $lte: endOfDay
+        }
+        });
+        if (!reservation) return res.status(404).json({ status: 'error', data: null, message: 'Reserva no encontrada' });
+
+        const jobId = `auto-cancel-${reservation._id}`; 
+        const reservationWorker = await reservationQueue.getJob(jobId);
+        if (reservationWorker) await reservationWorker.remove();
+
+        reservation.state = 'activa';
+        reservation.save();
+    
+        const reservationData = reservation.toObject();
+        const ticketValidation = ticketReservation(reservationData);
+        if (!ticketValidation) return res.status(200).json({ status: 'error', data: null, message: 'Error al generar el Ticket' });
+
+        return res.status(200).json({ status: 'success', data: null, message: 'Validacion de codigo correcto' });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ status: 'error', data: null, message: 'Error al validar la reserva' });
     }
 }
