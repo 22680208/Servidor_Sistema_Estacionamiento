@@ -21,7 +21,7 @@ export const getCarsForUser = async (req, res) => {
         if (!userId) {
             return res.status(400).json({ status: 'error', data: null, message: 'El userId es requerido' });
         }
-        const cars = await Car.find({ userId: userId });
+        const cars = await Car.find({ userId: userId }).lean();
         const carsData = cars.map(car => {
             return {
                 id: car._id,

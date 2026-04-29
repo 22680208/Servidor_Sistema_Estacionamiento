@@ -17,7 +17,6 @@ const ticketSchema = new mongoose.Schema({
     placeId: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Place', 
-        required: true 
     },
     carId: { 
         type: mongoose.Schema.Types.ObjectId, 
@@ -46,7 +45,7 @@ const ticketSchema = new mongoose.Schema({
     },
     baseFee: {
         type: mongoose.Schema.Types.Decimal128,
-        default: 150.00
+        default: 50.00
     },
     finalFee: {
         type: mongoose.Schema.Types.Decimal128,

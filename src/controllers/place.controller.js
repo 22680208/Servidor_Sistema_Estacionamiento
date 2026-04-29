@@ -25,7 +25,7 @@ export const createPlace = async (req, res) => {
 
 export const getPlaces = async (req, res) => {
     try {
-        const places = await Place.find();
+        const places = await Place.find().lean();
         const placesData = places.map(place => {
             return {
                 id: place._id,
@@ -45,11 +45,11 @@ export const getPlaces = async (req, res) => {
 export const getPlace = async (req, res) => {
     const { id } = req.params;
     try {
-        const place = await Place.findById(id);
+        const place = await Place.findById(id).lean();
         if (!place) {
             return res.status(404).json({ status: 'error', data: null, message: 'Lugar no encontrado' });
         }
-        const sensor = await Sensor.findById(place.sensorId);
+        const sensor = await Sensor.findById(place.sensorId).lean();
         if (!sensor) {
             return res.status(404).json({ status: 'error', data: null, message: 'Sensor no encontrado' });
         }

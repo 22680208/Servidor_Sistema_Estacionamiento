@@ -2,7 +2,7 @@ import { Queue } from 'bullmq';
 import Reservation from '../models/Reservation.js';
 import Place from '../models/Place.js';
 import redisConnection from '../config/redis.js';
-import { ticketReservation } from '../utils/ticket.js'
+import { ticketReservation } from './ticket.controller.js'
 
 const reservationQueue = new Queue('reservation-queue', { connection: redisConnection });
 
@@ -121,7 +121,7 @@ export const adjustReservation = async (req, res) => {
 
 export const getReservations = async (req, res) => {
     try {
-        const reservations = await Reservation.find();
+        const reservations = await Reservation.find().lean();
         return res.status(200).json({ status: 'success', data: reservations, message: 'Reservas obtenidas correctamente' });
     } catch (error) {
         console.error(error);
@@ -153,7 +153,7 @@ export const getCodeReservation = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const reservation = await Reservation.findById(id)
+        const reservation = await Reservation.findById(id).lean()
         if (!reservation) {
             return res.status(404).json({ status: 'error', message: 'Reserva no encontrada' });
         }
@@ -200,9 +200,9 @@ export const validationReservation = async (req, res) => {
     
         const reservationData = reservation.toObject();
         const ticketValidation = ticketReservation(reservationData);
-        if (!ticketValidation) return res.status(200).json({ status: 'error', data: null, message: 'Error al generar el Ticket' });
+        if (!ticketValidation) return res.status(200).json({ status: 'error', data: null, message: 'Error al crear el Ticket' });
 
-        return res.status(200).json({ status: 'success', data: null, message: 'Validacion de codigo correcto' });
+        return res.status(200).json({ status: 'success', data: null, message: 'Validacion de codigo correcto y ticket creado correctamente' });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ status: 'error', data: null, message: 'Error al validar la reserva' });
