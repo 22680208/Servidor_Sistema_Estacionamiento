@@ -6,6 +6,7 @@ import reservationRoute from './src/routes/reservation.route.js';
 import carRoute from './src/routes/car.route.js';
 import placeRoute from './src/routes/place.route.js';
 import ticketRoute from './src/routes/ticket.route.js';
+import dashboardRoute from './src/routes/dashboard.route.js';
 import 'dotenv/config';
 
 connectDB();
@@ -18,5 +19,6 @@ app.use('/api/reservation', reservationRoute);
 app.use('/api/car', carRoute);
 app.use('/api/place', placeRoute);
 app.use('/api/ticket', ticketRoute);
+app.use('/api/dashboard', dashboardRoute);
 
 export default app;
