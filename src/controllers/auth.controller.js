@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import Profile from '../models/Profile.js';
 
 const generarToken = (userId) => {
     return jwt.sign({ userId }, process.env.SECRET_KEY, { expiresIn: '1d' });
@@ -14,6 +15,7 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
+        const profile = await Profile.findOne({ userId: user._id }).lean();
         if (!user) return res.status(401).json({ message: 'Credenciales inválidas' });
 
         const isMatch = await bcrypt.compare(password, user.password);
@@ -28,7 +30,9 @@ export const login = async (req, res) => {
             refreshToken,
             user: {
                 id: user._id,
-                nombre: user.nombre,
+                firstName: profile.firstName,
+                lastName: profile.lastName,
+                role: user.role
             }
         });
     } catch (error) {
@@ -39,7 +43,7 @@ export const login = async (req, res) => {
 
 export const register = async (req, res) => {
     try {
-        const { nombre, email, password, role } = req.body;
+        const { firstName, lastName, notifications, email, password } = req.body;
         const existingUser = await User.findOne({ email });
 
         if (existingUser) return res.status(400).json({ message: 'El correo electrónico ya está en uso' });
@@ -47,22 +51,32 @@ export const register = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         const newUser = new User({
-            nombre,
             email,
             password: hashedPassword,
-            role: role || 'client'
+            role: 'client'
         });
 
+        const newProfile = new Profile({
+            userId: newUser._id,
+            firstName,
+            lastName,
+            preferences: {
+                notifications
+            }
+        });
+        
         const token = generarToken(newUser._id);
         const refreshToken = generarRefreshToken(newUser._id);
         newUser.refreshToken = refreshToken;
         await newUser.save();
+        await newProfile.save();
         return res.status(201).json({
             token,
             refreshToken,
             user: {
                 id: newUser._id,
-                nombre: newUser.nombre,
+                name: newUser.name,
+                role: newUser.role
             }
         });
     } catch (error) {
@@ -98,3 +112,7 @@ export const renovarToken = async (req, res) => {
         return res.status(403).json({ message: 'Token de refresco inválido' });
     }
 };
+
+export const fullname = async (req, res) => {
+    
+}

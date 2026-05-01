@@ -10,16 +10,16 @@ export const createPlace = async (req, res) => {
         const allValid = values.every(v => v !== undefined && v !== null && v !== "");
 
         if (!allValid) {
-            return res.status(400).json({ status: 'error', data: null, message: 'Todos los campos son requeridos' });
+            return res.status(400).json({ message: 'Todos los campos son requeridos' });
         }
         const sensorC = await Sensor.create({ model, pin_trigger, pin_echo, distance, lastDistance });
         await sensorC.save();
         const placeC = await Place.create({ sensorId: sensorC.id, number, state, type });
         await placeC.save();
-        return res.status(201).json({ status: 'success', data: null, message: 'Lugar creado correctamente' });
+        return res.status(201).json({ message: 'Lugar creado correctamente' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al crear el lugar' });
+        return res.status(500).json({ message: 'Error al crear el lugar' });
     }
 }
 
@@ -35,10 +35,10 @@ export const getPlaces = async (req, res) => {
                 type: place.type,
             }
         });
-        return res.status(200).json({ status: 'success', data: placesData, message: 'Lugares obtenidos correctamente' });
+        return res.status(200).json({ data: placesData, message: 'Lugares obtenidos correctamente' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al obtener los lugares' });
+        return res.status(500).json({ message: 'Error al obtener los lugares' });
     }
 }
 
@@ -47,11 +47,11 @@ export const getPlace = async (req, res) => {
     try {
         const place = await Place.findById(id).lean();
         if (!place) {
-            return res.status(404).json({ status: 'error', data: null, message: 'Lugar no encontrado' });
+            return res.status(404).json({ message: 'Lugar no encontrado' });
         }
         const sensor = await Sensor.findById(place.sensorId).lean();
         if (!sensor) {
-            return res.status(404).json({ status: 'error', data: null, message: 'Sensor no encontrado' });
+            return res.status(404).json({ message: 'Sensor no encontrado' });
         }
         const placeAndSensor = {
             id: place._id,
@@ -65,10 +65,10 @@ export const getPlace = async (req, res) => {
             distance: sensor.distance,
             lastDistance: sensor.lastDistance
         }
-        return res.status(200).json({ status: 'success', data: placeAndSensor, message: 'Lugar obtenido correctamente' });
+        return res.status(200).json({ data: placeAndSensor, message: 'Lugar obtenido correctamente' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al obtener el lugar' });
+        return res.status(500).json({ message: 'Error al obtener el lugar' });
     }
 }
 
@@ -78,16 +78,16 @@ export const updatePlace = async (req, res) => {
     try {
         const place = await Place.findById(id);
         if (!place) {
-            return res.status(404).json({ status: 'error', data: null, message: 'Lugar no encontrado' });
+            return res.status(404).json({ data: null, message: 'Lugar no encontrado' });
         }
         place.number = number;
         place.state = state;
         place.type = type;
         await place.save();
-        return res.status(200).json({ status: 'success', data: null, message: 'Lugar actualizado correctamente' });
+        return res.status(200).json({ message: 'Lugar actualizado correctamente' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al actualizar el lugar' });
+        return res.status(500).json({ message: 'Error al actualizar el lugar' });
     }
 }
 
@@ -98,11 +98,11 @@ export const updateSensor = async (req, res) => {
         const values = [model, pin_trigger, pin_echo, distance, lastDistance];
         const allValid = values.every(v => v !== undefined && v !== null && v !== "");
         if (!allValid) {
-            return res.status(400).json({ status: 'error', data: null, message: 'Todos los campos son requeridos' });
+            return res.status(400).json({ message: 'Todos los campos son requeridos' });
         }
         const sensor = await Sensor.findById(id);
         if (!sensor) {
-            return res.status(404).json({ status: 'error', data: null, message: 'Sensor no encontrado' });
+            return res.status(404).json({ message: 'Sensor no encontrado' });
         }
         sensor.model = model;
         sensor.pin_trigger = pin_trigger;
@@ -110,10 +110,10 @@ export const updateSensor = async (req, res) => {
         sensor.distance = distance;
         sensor.lastDistance = lastDistance;
         await sensor.save();
-        return res.status(200).json({ status: 'success', data: null, message: 'Sensor actualizado correctamente' });
+        return res.status(200).json({ message: 'Sensor actualizado correctamente' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al actualizar el sensor' });
+        return res.status(500).json({ message: 'Error al actualizar el sensor' });
     }
 }
 
@@ -122,16 +122,16 @@ export const deletePlace = async (req, res) => {
     try {
         const place = await Place.findByIdAndDelete(id);
         if (!place) {
-            return res.status(404).json({ status: 'error', data: null, message: 'Lugar no encontrado' });
+            return res.status(404).json({ message: 'Lugar no encontrado' });
         }
         const sensor = await Sensor.findByIdAndDelete(place.sensorId);
         if (!sensor) {
-            return res.status(404).json({ status: 'error', data: null, message: 'Sensor no encontrado' });
+            return res.status(404).json({ message: 'Sensor no encontrado' });
         }
-        return res.status(200).json({ status: 'success', data: null, message: 'Lugar eliminado correctamente' });
+        return res.status(200).json({ message: 'Lugar eliminado correctamente' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al eliminar el lugar' });
+        return res.status(500).json({ message: 'Error al eliminar el lugar' });
     }
 }
 

@@ -27,13 +27,9 @@ export const getParkingSummary = async (req, res) => {
             parking_slots
         };
 
-        return res.status(200).json(response);
+        return res.status(200).json({ data: response, message: 'Datos obtenidos correctamente'});
 
     } catch (error) {
-        console.error('Error al obtener el resumen del estacionamiento:', error);
-        return res.status(500).json({ 
-            status: 'error', 
-            message: 'Error al procesar la información del estacionamiento' 
-        });
+        return res.status(500).json({ message: 'Error al procesar la información del estacionamiento' });
     }
 };

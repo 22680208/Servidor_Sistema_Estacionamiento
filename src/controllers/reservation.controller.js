@@ -21,7 +21,7 @@ export const createReservation = async (req, res) => {
     const { userId, placeId, carId, time } = req.body;
     try {
         if (!userId || !placeId || !carId || !time ) {
-            return res.status(400).json({ status: 'error', data: null, message: 'Todos los campos son requeridos'});
+            return res.status(400).json({ message: 'Todos los campos son requeridos'});
         }
         const timeStart = new Date().toISOString();
         const timeEnd = addMinutes(timeStart, time);
@@ -37,7 +37,7 @@ export const createReservation = async (req, res) => {
         });
 
         if (place.modifiedCount === 0) {
-            return res.status(400).json({ status: 'error', data: null, message: 'Este lugar ya no está disponible'});
+            return res.status(400).json({ message: 'Este lugar ya no está disponible'});
         }
 
         const timeReservation = new Date(timeEnd).getTime() - Date.now();
@@ -68,9 +68,9 @@ export const createReservation = async (req, res) => {
             }
         );
 
-        return res.status(202).json({ status: 'success', data: null, message: 'Reserva creada correctamente' });
+        return res.status(202).json({ message: 'Reserva creada correctamente' });
     } catch (error) {
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al crear la reserva' });
+        return res.status(500).json({ message: 'Error al crear la reserva' });
     }
 }
 
@@ -80,7 +80,7 @@ export const adjustReservation = async (req, res) => {
         const { id } = req.params;
         const reservation = await Reservation.findById(id);
         if (!reservation) {
-            return res.status(404).json({ status: 'error', message: 'Reserva no encontrada' });
+            return res.status(404).json({ message: 'Reserva no encontrada' });
         }
         const jobId = `auto-cancel-${id}`; 
         const currentJob = await reservationQueue.getJob(jobId);
@@ -115,17 +115,17 @@ export const adjustReservation = async (req, res) => {
 
     } catch (error) {
         console.error("Error en adjustReservation:", error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al ajustar el límite' });
+        return res.status(500).json({ message: 'Error al ajustar el límite' });
     }
 }
 
 export const getReservations = async (req, res) => {
     try {
         const reservations = await Reservation.find().lean();
-        return res.status(200).json({ status: 'success', data: reservations, message: 'Reservas obtenidas correctamente' });
+        return res.status(200).json({ data: reservations, message: 'Reservas obtenidas correctamente' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al obtener las reservas' });
+        return res.status(500).json({ message: 'Error al obtener las reservas' });
     }
 }
 
@@ -134,7 +134,7 @@ export const deleteResertvation = async (req, res) => {
         const { id } = req.params;
         const reservation = await Reservation.findById(id);
         if (!reservation) {
-            return res.status(404).json({ status: 'error', message: 'Reserva no encontrada' });
+            return res.status(404).json({ message: 'Reserva no encontrada' });
         }
         await reservationQueue.add('cancel-reservation', { 
             reservationId: id,
@@ -143,9 +143,9 @@ export const deleteResertvation = async (req, res) => {
         const jobId = `auto-cancel-${id}`; 
         const reservationWorker = await reservationQueue.getJob(jobId);
         if (reservationWorker) await reservationWorker.remove();
-        return res.status(200).json({ status: 'success', data: null, message: 'Reserva eliminada correctamente'});
+        return res.status(200).json({ message: 'Reserva eliminada correctamente'});
     } catch (error) {
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al eliminar la reserva' });
+        return res.status(500).json({ message: 'Error al eliminar la reserva' });
     }
 }
 
@@ -155,11 +155,11 @@ export const getCodeReservation = async (req, res) => {
 
         const reservation = await Reservation.findById(id).lean()
         if (!reservation) {
-            return res.status(404).json({ status: 'error', message: 'Reserva no encontrada' });
+            return res.status(404).json({ message: 'Reserva no encontrada' });
         }
-        return res.status(200).json({ status: 'success', data: reservation.code, message: 'Codigo de reserva encontrado' });
+        return res.status(200).json({ data: reservation.code, message: 'Codigo de reserva encontrado' });
     } catch (error) {
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al obtener el codigo'})
+        return res.status(500).json({ message: 'Error al obtener el codigo'})
     }
 }
 
@@ -189,7 +189,7 @@ export const validationReservation = async (req, res) => {
             $lte: endOfDay
         }
         });
-        if (!reservation) return res.status(404).json({ status: 'error', data: null, message: 'Reserva no encontrada' });
+        if (!reservation) return res.status(404).json({ message: 'Reserva no encontrada' });
 
         const jobId = `auto-cancel-${reservation._id}`; 
         const reservationWorker = await reservationQueue.getJob(jobId);
@@ -200,11 +200,11 @@ export const validationReservation = async (req, res) => {
     
         const reservationData = reservation.toObject();
         const ticketValidation = ticketReservation(reservationData);
-        if (!ticketValidation) return res.status(200).json({ status: 'error', data: null, message: 'Error al crear el Ticket' });
+        if (!ticketValidation) return res.status(200).json({ message: 'Error al crear el Ticket' });
 
-        return res.status(200).json({ status: 'success', data: null, message: 'Validacion de codigo correcto y ticket creado correctamente' });
+        return res.status(200).json({ message: 'Validacion de codigo correcto y ticket creado correctamente' });
     } catch (error) {
         console.log(error);
-        return res.status(500).json({ status: 'error', data: null, message: 'Error al validar la reserva' });
+        return res.status(500).json({ message: 'Error al validar la reserva' });
     }
 }

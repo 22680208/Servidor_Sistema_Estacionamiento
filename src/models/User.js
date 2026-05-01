@@ -1,10 +1,6 @@
 import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
-    nombre: {
-        type: String,
-        required: true
-    },
     email: {
         type: String, 
         required: true, 
@@ -27,10 +23,6 @@ const userSchema = new mongoose.Schema({
     },
     fcmToken: { 
         type: String 
-    },
-    profilePic: { 
-        type: String, 
-        default: "" 
     }
 }, { timestamps: true });
 

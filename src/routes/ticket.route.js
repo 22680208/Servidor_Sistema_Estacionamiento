@@ -10,7 +10,7 @@ router.get('/:id', verifyToken, getTicket);
 router.get('/user/:id', verifyToken, getTicketsUser);
 router.post('/associate-user-ticket', verifyToken, associateUserTicket);
 router.post('/calculate', verifyToken, calculateTicket);
-router.post('/pay', payTicket);
-router.post('/close', closeTicket);
+router.post('/pay', verifyToken, payTicket);
+router.post('/close', verifyToken, closeTicket);
 
 export default router;  
