@@ -7,11 +7,31 @@ import carRoute from './src/routes/car.route.js';
 import placeRoute from './src/routes/place.route.js';
 import ticketRoute from './src/routes/ticket.route.js';
 import dashboardRoute from './src/routes/dashboard.route.js';
+import cors from 'cors'
+
+
 import 'dotenv/config';
 
 connectDB();
 const app = express()
+const whitelist = [
+  'http://localhost:64189',
+];
 
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado por CORS: Este origen no está permitido'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true 
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
 app.use('/api/auth', authRoute);

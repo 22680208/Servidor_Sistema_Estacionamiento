@@ -15,12 +15,12 @@ export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
-        const profile = await Profile.findOne({ userId: user._id }).lean();
         if (!user) return res.status(401).json({ message: 'Credenciales inválidas' });
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(401).json({ message: 'Credenciales inválidas' });
 
+        const profile = await Profile.findOne({ userId: user._id }).lean();
         const token = generarToken(user._id);
         const refreshToken = generarRefreshToken(user._id);
         user.refreshToken = refreshToken;
@@ -113,6 +113,18 @@ export const renovarToken = async (req, res) => {
     }
 };
 
-export const fullname = async (req, res) => {
-    
+export const profile = async (req, res) => {
+    try {
+        const userE = req.user;
+        const profile = await Profile.findOne({ userId: userE.userId }).lean();
+        if (!profile) return res.status(404).json({ message: 'Perfil no encontrado' });
+        const user = {
+            id: profile.userId.toString(),
+            firstName: profile.firstName,
+            lastName: profile.lastName
+        }
+        res.status(200).json( user );
+    } catch (error) {
+        return res.status(500).json({ message: 'Error en el servidor' });
+    }
 }

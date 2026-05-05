@@ -5,6 +5,7 @@ import redisConnection from '../config/redis.js';
 import { ticketReservation } from './ticket.controller.js'
 
 const reservationQueue = new Queue('reservation-queue', { connection: redisConnection });
+const dashboardQueue = new Queue("dashboard-queue", { connection: redisConnection });
 
 const addMinutes = (dateString, minutes) => {
     try {
@@ -39,7 +40,8 @@ export const createReservation = async (req, res) => {
         if (place.modifiedCount === 0) {
             return res.status(400).json({ message: 'Este lugar ya no está disponible'});
         }
-
+        await dashboardQueue.add("update-dashboard-stats", { reason: "new-reservation" });
+        
         const timeReservation = new Date(timeEnd).getTime() - Date.now();
 
         const newReservation = await Reservation.create({

@@ -3,6 +3,7 @@ import redisConnection from "../config/redis.js";
 import Reservation from "../models/Reservation.js";
 import Place from "../models/Place.js";
 import { customAlphabet } from 'nanoid';
+import { summary } from "../utils/structureForResponse.js";
 
 const nanoid = customAlphabet('1234567890', 6);
 export const initReservationWorker = () => {
@@ -52,7 +53,12 @@ export const initReservationWorker = () => {
 							Reservation.findByIdAndUpdate(reservationId, { state: 'cancelada' }),
 							Place.findByIdAndUpdate(placeId, { state: 'disponible' })
 						]);
+						const freshData = await summary();
 
+						const subscribers = await redisConnection.publish(
+							'parking_updates',
+							JSON.stringify(freshData),
+						);
 						console.log(`[Worker] Lugar ${placeId} liberado y reserva finalizada.`);
 					} else {
 					console.log(`[Worker] La reserva ${reservationId} está en estado '${res.state}', no se cancela.`);
@@ -79,7 +85,12 @@ export const initReservationWorker = () => {
 							Reservation.findByIdAndUpdate(reservationId, { state: 'cancelada' }),
 							Place.findByIdAndUpdate(placeId, { state: 'disponible' })
 						]);
+						const freshData = await summary();
 
+						const subscribers = await redisConnection.publish(
+							'parking_updates',
+							JSON.stringify(freshData),
+						);
 						console.log(`[Worker] Lugar ${placeId} liberado y reserva finalizada.`);
 					} else {
 					console.log(`[Worker] La reserva ${reservationId} está en estado '${reservation.state}', no se cancela.`);

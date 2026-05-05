@@ -218,7 +218,7 @@ export const payTicket = async (req, res) => {
 
         return res.status(200).json({ data: true, message: 'Ticket pagado' });
     } catch (error) {
-        return res.status(500).json({ data: null, message: 'Error al pagar el Ticket' });
+        return res.status(500).json({ message: 'Error al pagar el Ticket' });
     }
 }
 
