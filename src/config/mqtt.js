@@ -9,14 +9,26 @@ const options = {
   reconnectPeriod: 1000,
 };
 
-const client = mqtt.connect(MQTT_URL, options);
+const mqttClient = mqtt.connect(MQTT_URL, options);
 
-client.on('connect', () => {
-  console.log('Conectado al Broker MQTT');
+mqttClient.on('connect', () => {
+  console.log('[MQTT] Conectado al Broker');
 });
 
-client.on('error', (err) => {
-  console.error('Error MQTT:', err);
+mqttClient.on('reconnect', () => {
+  console.log('[MQTT] Reintentando conexion...');
 });
 
-export default client;
+mqttClient.on('close', () => {
+  console.log('[MQTT] Conexion cerrada');
+});
+
+mqttClient.on('offline', () => {
+  console.log('[MQTT] Cliente offline');
+});
+
+mqttClient.on('error', (err) => {
+  console.error('[MQTT] Error:', err.message);
+});
+
+export default mqttClient;

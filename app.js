@@ -7,6 +7,9 @@ import carRoute from './src/routes/car.route.js';
 import placeRoute from './src/routes/place.route.js';
 import ticketRoute from './src/routes/ticket.route.js';
 import dashboardRoute from './src/routes/dashboard.route.js';
+import accessRoutes from './src/routes/access.route.js';
+import parkingRoutes from './src/routes/parking.route.js'
+
 import cors from 'cors'
 
 
@@ -40,5 +43,7 @@ app.use('/api/car', carRoute);
 app.use('/api/place', placeRoute);
 app.use('/api/ticket', ticketRoute);
 app.use('/api/dashboard', dashboardRoute);
+app.use('/api/access', accessRoutes);
+app.use('/api/parking', parkingRoutes);
 
 export default app;
