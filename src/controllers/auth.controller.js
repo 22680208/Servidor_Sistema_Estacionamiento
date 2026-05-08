@@ -21,12 +21,12 @@ export const login = async (req, res) => {
         if (!isMatch) return res.status(401).json({ message: 'Credenciales inválidas' });
 
         const profile = await Profile.findOne({ userId: user._id }).lean();
-        const token = generarToken(user._id);
+        const accessToken = generarToken(user._id);
         const refreshToken = generarRefreshToken(user._id);
         user.refreshToken = refreshToken;
         await user.save();
         return res.json({
-            token,
+            accessToken,
             refreshToken,
             user: {
                 id: user._id,
@@ -65,13 +65,13 @@ export const register = async (req, res) => {
             }
         });
         
-        const token = generarToken(newUser._id);
+        const accessToken = generarToken(newUser._id);
         const refreshToken = generarRefreshToken(newUser._id);
         newUser.refreshToken = refreshToken;
         await newUser.save();
         await newProfile.save();
         return res.status(201).json({
-            token,
+            accessToken,
             refreshToken,
             user: {
                 id: newUser._id,

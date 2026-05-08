@@ -8,7 +8,8 @@ import placeRoute from './src/routes/place.route.js';
 import ticketRoute from './src/routes/ticket.route.js';
 import dashboardRoute from './src/routes/dashboard.route.js';
 import accessRoutes from './src/routes/access.route.js';
-import parkingRoutes from './src/routes/parking.route.js'
+import parkingRoutes from './src/routes/sse.route.js'
+import { subscribeRealtimeEvents } from './src/services/realtime-pubsub.service.js';
 
 import cors from 'cors'
 
@@ -16,6 +17,7 @@ import cors from 'cors'
 import 'dotenv/config';
 
 connectDB();
+subscribeRealtimeEvents();
 const app = express()
 const whitelist = [
   'http://localhost:64189',
@@ -44,6 +46,6 @@ app.use('/api/place', placeRoute);
 app.use('/api/ticket', ticketRoute);
 app.use('/api/dashboard', dashboardRoute);
 app.use('/api/access', accessRoutes);
-app.use('/api/parking', parkingRoutes);
+app.use('/api/sse', parkingRoutes);
 
 export default app;

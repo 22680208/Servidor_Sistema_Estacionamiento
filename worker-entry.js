@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { connectDB } from './src/config/db.js';
 import { initReservationWorker } from './src/workers/reservation.worker.js';
 import { initTicketWorker } from './src/workers/ticket.worker.js';
-import { initDashboardWorker } from './src/workers/dashboard.worker.js';
 import { initMessagingWorker } from './src/workers/messaging.worker.js';
 
 const startWorker = async () => {
@@ -12,7 +11,6 @@ const startWorker = async () => {
 
     initReservationWorker();
     initTicketWorker();
-    initDashboardWorker();
 
     await initMessagingWorker();
   } catch (error) {

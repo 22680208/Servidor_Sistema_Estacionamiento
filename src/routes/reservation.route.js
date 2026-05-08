@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post('/', verifyToken, createReservation);
 router.patch('/:id/adjust', verifyToken, adjustReservation);
-router.get('/', verifyToken, getReservations);
+router.get('/:id', verifyToken, getReservations);
 router.delete('/:id', verifyToken, deleteResertvation);
 router.get('/:id/code', verifyToken, getCodeReservation);
 router.post('/validation/:code', verifyToken, validationReservation);

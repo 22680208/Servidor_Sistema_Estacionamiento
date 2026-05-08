@@ -14,7 +14,7 @@ const reservationSchema = new mongoose.Schema({
     carId: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Car', 
-        required: true 
+        default: null
     },
     code: {
         type: Number,

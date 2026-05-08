@@ -3,7 +3,8 @@ import redisConnection from "../config/redis.js";
 import Reservation from "../models/Reservation.js";
 import Place from "../models/Place.js";
 import { customAlphabet } from 'nanoid';
-import { summary } from "../utils/structureForResponse.js";
+import { parkingSummary, reservationSummary } from "../utils/structureForResponse.js";
+import { publishRealtimeEvent } from "../services/realtime-pubsub.service.js";
 
 const nanoid = customAlphabet('1234567890', 6);
 export const initReservationWorker = () => {
@@ -39,9 +40,11 @@ export const initReservationWorker = () => {
 			}
 
 			if (job.name === 'auto-cancel-reservation') {
-				const { reservationId, placeId } = job.data;
+				const { userId, reservationId, placeId } = job.data;
 				try {
+					
 					const res = await Reservation.findById(reservationId);
+					
 					if (!res) {
 						console.log(`[Worker] Tarea abortada: No existe la reserva ${reservationId}`);
 						return;
@@ -53,12 +56,24 @@ export const initReservationWorker = () => {
 							Reservation.findByIdAndUpdate(reservationId, { state: 'cancelada' }),
 							Place.findByIdAndUpdate(placeId, { state: 'disponible' })
 						]);
-						const freshData = await summary();
-
-						const subscribers = await redisConnection.publish(
-							'parking_updates',
-							JSON.stringify(freshData),
-						);
+						const dashboardData = await parkingSummary();
+						await publishRealtimeEvent({
+							channel: 'dashboard',
+							event: 'dashboard.updated',
+							payload: {
+								message: 'reserva auto-cancelada',
+								data: dashboardData,
+							},
+						});
+						const reservationData = await reservationSummary(userId);
+						await publishRealtimeEvent({
+							channel: 'reservation',
+							event: 'reservation.updated',
+							payload: {
+								message: 'reserva auto-cancelada',
+								data: reservationData,
+							},
+						});
 						console.log(`[Worker] Lugar ${placeId} liberado y reserva finalizada.`);
 					} else {
 					console.log(`[Worker] La reserva ${reservationId} está en estado '${res.state}', no se cancela.`);
@@ -66,37 +81,6 @@ export const initReservationWorker = () => {
 					return;
 				} catch (error) {
 					console.error(`[Worker] Error procesando auto-cancelación: ${error.message}`);
-					throw error; 
-				}
-			}
-
-			if (job.name === 'cancel-reservation') {
-				const { reservationId, placeId } = job.data;
-				try {
-					const reservation = await Reservation.findById(reservationId);
-					if (!reservation) {
-						console.log(`[Worker] Tarea abortada: No existe la reserva ${reservationId}`);
-						return;
-					}
-					if (reservation.state === 'pendiente') {
-						console.log(`[Worker] Reserva canceladda con id: ${reservationId}`);
-
-						await Promise.all([
-							Reservation.findByIdAndUpdate(reservationId, { state: 'cancelada' }),
-							Place.findByIdAndUpdate(placeId, { state: 'disponible' })
-						]);
-						const freshData = await summary();
-
-						const subscribers = await redisConnection.publish(
-							'parking_updates',
-							JSON.stringify(freshData),
-						);
-						console.log(`[Worker] Lugar ${placeId} liberado y reserva finalizada.`);
-					} else {
-					console.log(`[Worker] La reserva ${reservationId} está en estado '${reservation.state}', no se cancela.`);
-					}
-				} catch (error) {
-					console.error(`[Worker] Error procesando cancelación: ${error.message}`);
 					throw error; 
 				}
 			}

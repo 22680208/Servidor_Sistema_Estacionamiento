@@ -3,6 +3,9 @@ import Reservation from '../models/Reservation.js';
 import Place from '../models/Place.js';
 import redisConnection from '../config/redis.js';
 import { ticketReservation } from './ticket.controller.js'
+import { parkingSummary, reservationSummary } from '../utils/structureForResponse.js';
+import { publishRealtimeEvent } from '../services/realtime-pubsub.service.js';
+import Car from '../models/Car.js';
 
 const reservationQueue = new Queue('reservation-queue', { connection: redisConnection });
 const dashboardQueue = new Queue("dashboard-queue", { connection: redisConnection });
@@ -21,7 +24,7 @@ const addMinutes = (dateString, minutes) => {
 export const createReservation = async (req, res) => {
     const { userId, placeId, carId, time } = req.body;
     try {
-        if (!userId || !placeId || !carId || !time ) {
+        if (!userId || !placeId || !time ) {
             return res.status(400).json({ message: 'Todos los campos son requeridos'});
         }
         const timeStart = new Date().toISOString();
@@ -40,8 +43,15 @@ export const createReservation = async (req, res) => {
         if (place.modifiedCount === 0) {
             return res.status(400).json({ message: 'Este lugar ya no está disponible'});
         }
-        await dashboardQueue.add("update-dashboard-stats", { reason: "new-reservation" });
-        
+        const dashboardData = await parkingSummary();
+        await publishRealtimeEvent({
+            channel: 'dashboard',
+            event: 'dashboard.updated',
+            payload: {
+                message: 'nueva reserva',
+                data: dashboardData,
+            },
+        });
         const timeReservation = new Date(timeEnd).getTime() - Date.now();
 
         const newReservation = await Reservation.create({
@@ -60,6 +70,7 @@ export const createReservation = async (req, res) => {
         });
 
         await reservationQueue.add('auto-cancel-reservation', { 
+                userId: userId,
                 reservationId: newReservation._id, 
                 placeId 
             }, { 
@@ -70,8 +81,24 @@ export const createReservation = async (req, res) => {
             }
         );
 
-        return res.status(202).json({ message: 'Reserva creada correctamente' });
+        const placeD = await Place.findById(placeId).lean()
+        const car = await Car.findById(carId);
+    
+        const reservation = {
+            _id: newReservation._id,
+            userId: newReservation.userId,
+		    placeId: newReservation.placeId,
+            place: placeD.number,
+		    carId: newReservation.carId,
+            car: car || "Sin Carro",
+		    timeStart: newReservation.timeStart,
+		    timeEnd: newReservation.timeEnd,
+		    state: newReservation.state,
+            code: ""
+        }
+        return res.status(202).json({ reservation });
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ message: 'Error al crear la reserva' });
     }
 }
@@ -123,8 +150,9 @@ export const adjustReservation = async (req, res) => {
 
 export const getReservations = async (req, res) => {
     try {
-        const reservations = await Reservation.find().lean();
-        return res.status(200).json({ data: reservations, message: 'Reservas obtenidas correctamente' });
+        const { id } = req.params;
+        const reservations = reservationSummary(id)
+        return res.status(200).json({ reservations });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Error al obtener las reservas' });
@@ -134,19 +162,44 @@ export const getReservations = async (req, res) => {
 export const deleteResertvation = async (req, res) => {
     try {
         const { id } = req.params;
-        const reservation = await Reservation.findById(id);
+        const reservation = await Reservation.findByIdAndDelete(id);
+    
         if (!reservation) {
             return res.status(404).json({ message: 'Reserva no encontrada' });
         }
-        await reservationQueue.add('cancel-reservation', { 
-            reservationId: id,
-            placeId: reservation.placeId
-        });
+
+        if (reservation.state === 'pendiente') {
+            await Promise.all([
+                Reservation.findByIdAndUpdate(id, { state: 'cancelada' }),
+                Place.findByIdAndUpdate(reservation.placeId, { state: 'disponible' })
+            ]);
+            const dashboardData = await parkingSummary();
+            await publishRealtimeEvent({
+                channel: 'dashboard',
+                event: 'dashboard.updated',
+                payload: {
+                    message: 'reserva cancelada',
+                    data: dashboardData,
+                },
+            });
+            const reservationData = await reservationSummary(reservation.userId);
+            await publishRealtimeEvent({
+                channel: 'reservation',
+                event: 'reservation.updated',
+                payload: {
+                    message: 'reserva cancelada',
+                    data: reservationData,
+                },
+            });
+        } else {
+            return res.status(400).json({ message: `La reserva ${id} está en estado '${reservation.state}', no se cancela.` });
+        }
         const jobId = `auto-cancel-${id}`; 
         const reservationWorker = await reservationQueue.getJob(jobId);
         if (reservationWorker) await reservationWorker.remove();
-        return res.status(200).json({ message: 'Reserva eliminada correctamente'});
+        return res.sendStatus(200);
     } catch (error) {
+        console.error(error)
         return res.status(500).json({ message: 'Error al eliminar la reserva' });
     }
 }

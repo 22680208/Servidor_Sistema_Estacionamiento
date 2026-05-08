@@ -1,16 +1,8 @@
-import Place from '../models/Place.js';
-import { createRedisSseHandler } from '../services/sseRedisService.js';
-import { summary } from '../utils/structureForResponse.js';
-
-
-export const streamParkingSummary = createRedisSseHandler(
-  'parking_updates', 
-  summary,
-);
+import { parkingSummary } from '../utils/structureForResponse.js';
 
 export const getParkingSummary = async (req, res) => {
   try {
-    const data = await summary();
+    const data = await parkingSummary();
     return res.status(200).json({
       data,
       message: 'Datos obtenidos correctamente',
