@@ -3,6 +3,7 @@ import redisConnection from "../config/redis.js";
 import Ticket from '../models/Ticket.js';
 import { customAlphabet } from 'nanoid';
 import { sendAuthCode, sendLeave } from '../services/mqttService.js';
+import { ticketsSummary } from "../utils/structureForResponse.js";
 
 const TOPIC_ESP32 = 'parking/v1/esp32/access';
 const LEAVE_ESP32 = 'parking/v1/esp32/leave';
@@ -34,6 +35,15 @@ export const initTicketWorker = () => {
                 }while(ticket);
 
                 await Ticket.findByIdAndUpdate(ticketId, { code });
+                const ticketsData = await ticketsSummary(userId);
+                await publishRealtimeEvent({
+                    channel: 'ticket',
+                    event: 'ticket.updated',
+                    payload: {
+                        message: 'ticket actualizado',
+                        data: ticketsData,
+                    },
+                });
                 console.log(
                     `[Worker] Código ${code} asignado a ticket ${ticketId}`,
                 );
@@ -64,12 +74,6 @@ export const initTicketWorker = () => {
                 
                 console.log(
                     `[Worker] Código ${code} asignado a ticket ${ticketId}`,
-                );
-            }
-            if (job.name === "leave-parking") {
-                sendLeave(LEAVE_ESP32);
-                console.log(
-                    `[Worker] salida activada`,
                 );
             }
         },

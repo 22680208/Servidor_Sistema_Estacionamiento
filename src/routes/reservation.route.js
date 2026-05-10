@@ -8,6 +8,6 @@ router.patch('/:id/adjust', verifyToken, adjustReservation);
 router.get('/:id', verifyToken, getReservations);
 router.delete('/:id', verifyToken, deleteResertvation);
 router.get('/:id/code', verifyToken, getCodeReservation);
-router.post('/validation/:code', verifyToken, validationReservation);
+router.post('/validation/:code', validationReservation);
 
 export default router;  

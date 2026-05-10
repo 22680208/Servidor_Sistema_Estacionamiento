@@ -4,6 +4,7 @@ import { Queue } from 'bullmq';
 import redisConnection from '../config/redis.js';
 const ticketQueue = new Queue('ticket-queue', { connection: redisConnection });
 import { customAlphabet } from 'nanoid';
+import { ticketsSummary } from '../utils/structureForResponse.js';
 
 const nanoid = customAlphabet('1234567890', 6);
 
@@ -63,7 +64,7 @@ export const ticketOnly = async (req, res) => {
             attempts: 3,
             backoff: 5000
         });
-        return res.status(200).json({ message: 'Ticket creado, esperando codigo' });
+        return res.sendStatus(200);
     } catch (error) {
         return res.status(500).json({ message: 'Error al crear Ticket' });
     }
@@ -73,7 +74,7 @@ export const associateUserTicket = async (req, res) => {
     try {
         const { userId, placeId, carId, code } = req.body;
 
-        if (!userId || !placeId || !carId ) {
+        if (!userId || !placeId ) {
             return res.status(400).json({ message: 'Todos los campos son requeridos'});
         }
 
@@ -81,8 +82,8 @@ export const associateUserTicket = async (req, res) => {
             _id: placeId,
             state: 'ocupado'
         });
-        if (place) {
-            return res.status(404).json({ message: 'Lugar ocupado' });
+        if (!place) {
+            return res.status(404).json({ message: 'Lugar libre' });
         }
 
         const { startOfDay, endOfDay } = getDayRangeUTC();
@@ -103,21 +104,9 @@ export const associateUserTicket = async (req, res) => {
         ticket.userId = userId;
 
         ticket.save();
-        return res.status(200).json({ message: 'Usuario asociado a Ticket correctamente' });
+        return res.sendStatus(200);
     } catch (error) {
         return res.status(500).json({ message: 'Error al crear el Ticket' });
-    }
-}
-
-export const getTicket = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const ticket = await Ticket.findById(id).lean();
-        if (!ticket) return res.status(404).json({ data: ticket, message: 'Ticket no encontrado' });
-
-        return res.status(200).json({ data: ticket, message: 'Ticket encontrado' });
-    } catch (error) {
-        return res.status(500).json({ message: 'Error al buscar el Ticket' });
     }
 }
 
@@ -141,24 +130,13 @@ export const getTickets = async (req, res) => {
         return res.status(500).json({ message: 'Error al buscar los Tickets' });
     }
 }
-
+//sse
 export const getTicketsUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const tickets = await Ticket.find({userId: id}).lean();
-        const ticketsData = tickets.map(ticket => {
-            return {
-                id: ticket._id,
-                folio: ticket.folio,
-                state: ticket.state,
-                baseFee: ticket.baseFee,
-                discountType: ticket.discountType,
-                validationIn: ticket.validationIn,
-                validationOut: ticket.validationOut
-            }
-        });
+        const tickets = await ticketsSummary(id);
 
-        return res.status(200).json({ status: 'success', data: ticketsData, message: 'Tickets encontrados' });
+        return res.status(200).json(tickets);
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Error al buscar los Tickets' });
@@ -185,16 +163,16 @@ export const calculateTicket  = async (req, res) => {
             $lte: endOfDay
         }
         });
-        if (!ticket) return res.status(404).json({ data: ticket, message: 'Ticket no encontrado' });
+        if (!ticket) return res.status(404).json({ message: 'Ticket no encontrado' });
 
         const timeEnd = new Date();
-        console.log(timeEnd)
         ticket.timeEnd = timeEnd;
         ticket.finalFee = calculateTotal(ticket.timeStart, timeEnd);
         ticket.save();
-        return res.status(200).json({ status: 'success', data: ticket.finalFee, message: 'Pago caluculado' });
+
+        console.log(ticket.finalFee)
+        return res.status(200).json({ finalFee: Number(ticket.finalFee.toString())});
     } catch (error) {
-        console.log(error);
         return res.status(500).json({ message: 'Error al calcular el pago' });
     }
 }
@@ -202,7 +180,7 @@ export const calculateTicket  = async (req, res) => {
 export const payTicket = async (req, res) => {
     try {
         const { code, payIsValid } = req.body;
-        if (!payIsValid) return res.status(500).json({ data: false, message: 'Pago no validado' });
+        if (!payIsValid) return res.status(500).json({ message: 'Pago no validado' });
         const { startOfDay, endOfDay } = getDayRangeUTC();
 
         const ticket = await Ticket.findOne({
@@ -215,13 +193,22 @@ export const payTicket = async (req, res) => {
 
         ticket.state = 'pagado';
         ticket.save();
-
-        return res.status(200).json({ data: true, message: 'Ticket pagado' });
+        const ticketsData = await ticketsSummary(ticket.userId);
+        await publishRealtimeEvent({
+            channel: 'ticket',
+            event: 'ticket.updated',
+            payload: {
+                message: 'ticket actualizado',
+                data: ticketsData,
+            },
+        });
+        return res.sendStatus(200);
     } catch (error) {
+        console.log(error);
         return res.status(500).json({ message: 'Error al pagar el Ticket' });
     }
 }
-
+//mqtt
 export const closeTicket = async (req, res) => {
     try {
         const { code } = req.body;
@@ -242,7 +229,7 @@ export const closeTicket = async (req, res) => {
             attempts: 3,
             backoff: 5000
         });
-        return res.status(200).json({ message: 'Ticket finalizado' });
+        return res.sendStatus(200);
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Error al finalizar el Ticket o salir del estacionamiento' });

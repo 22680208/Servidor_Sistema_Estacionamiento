@@ -36,7 +36,7 @@ export const createReservation = async (req, res) => {
         },
         {
             $set: {
-                state: 'ocupado'
+                state: 'reservado'
             }
         });
 
@@ -63,7 +63,8 @@ export const createReservation = async (req, res) => {
         });
 
         await reservationQueue.add('generate-access-code', {
-            reservationId: newReservation._id
+            reservationId: newReservation._id,
+            userId: userId
         }, {
             attempts: 3,
             backoff: 5000
@@ -94,9 +95,9 @@ export const createReservation = async (req, res) => {
 		    timeStart: newReservation.timeStart,
 		    timeEnd: newReservation.timeEnd,
 		    state: newReservation.state,
-            code: ""
+            code: newReservation.code || null
         }
-        return res.status(202).json({ reservation });
+        return res.status(202).json( reservation );
     } catch (error) {
         console.log(error)
         return res.status(500).json({ message: 'Error al crear la reserva' });
@@ -151,8 +152,8 @@ export const adjustReservation = async (req, res) => {
 export const getReservations = async (req, res) => {
     try {
         const { id } = req.params;
-        const reservations = reservationSummary(id)
-        return res.status(200).json({ reservations });
+        const reservations = await reservationSummary(id)
+        return res.status(200).json( reservations );
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Error al obtener las reservas' });
@@ -168,32 +169,28 @@ export const deleteResertvation = async (req, res) => {
             return res.status(404).json({ message: 'Reserva no encontrada' });
         }
 
-        if (reservation.state === 'pendiente') {
-            await Promise.all([
-                Reservation.findByIdAndUpdate(id, { state: 'cancelada' }),
-                Place.findByIdAndUpdate(reservation.placeId, { state: 'disponible' })
-            ]);
-            const dashboardData = await parkingSummary();
-            await publishRealtimeEvent({
-                channel: 'dashboard',
-                event: 'dashboard.updated',
-                payload: {
-                    message: 'reserva cancelada',
-                    data: dashboardData,
-                },
-            });
-            const reservationData = await reservationSummary(reservation.userId);
-            await publishRealtimeEvent({
-                channel: 'reservation',
-                event: 'reservation.updated',
-                payload: {
-                    message: 'reserva cancelada',
-                    data: reservationData,
-                },
-            });
-        } else {
-            return res.status(400).json({ message: `La reserva ${id} está en estado '${reservation.state}', no se cancela.` });
-        }
+        if (reservation.state === 'pendiente') await Place.findByIdAndUpdate(reservation.placeId, { state: 'disponible' })
+    
+        const dashboardData = await parkingSummary();
+        await publishRealtimeEvent({
+            channel: 'dashboard',
+            event: 'dashboard.updated',
+            payload: {
+                message: 'reserva eliminada',
+                data: dashboardData,
+            },
+        });
+
+        const reservationData = await reservationSummary(reservation.userId);
+        await publishRealtimeEvent({
+            channel: 'reservation',
+            event: 'reservation.updated',
+            payload: {
+                message: 'reserva eliminada',
+                data: reservationData,
+            },
+        });
+        
         const jobId = `auto-cancel-${id}`; 
         const reservationWorker = await reservationQueue.getJob(jobId);
         if (reservationWorker) await reservationWorker.remove();
@@ -212,7 +209,7 @@ export const getCodeReservation = async (req, res) => {
         if (!reservation) {
             return res.status(404).json({ message: 'Reserva no encontrada' });
         }
-        return res.status(200).json({ data: reservation.code, message: 'Codigo de reserva encontrado' });
+        return res.status(200).json( reservation.code );
     } catch (error) {
         return res.status(500).json({ message: 'Error al obtener el codigo'})
     }
@@ -250,13 +247,21 @@ export const validationReservation = async (req, res) => {
         const reservationWorker = await reservationQueue.getJob(jobId);
         if (reservationWorker) await reservationWorker.remove();
 
-        reservation.state = 'activa';
+        reservation.state = 'completada';
         reservation.save();
     
-        const reservationData = reservation.toObject();
-        const ticketValidation = ticketReservation(reservationData);
+        const reservationDataforTicket = reservation.toObject();
+        const ticketValidation = ticketReservation(reservationDataforTicket);
         if (!ticketValidation) return res.status(200).json({ message: 'Error al crear el Ticket' });
-
+        const reservationData = await reservationSummary(reservation.userId);
+        await publishRealtimeEvent({
+            channel: 'reservation',
+            event: 'reservation.updated',
+            payload: {
+                message: 'reserva completada',
+                data: reservationData,
+            },
+        });
         return res.status(200).json({ message: 'Validacion de codigo correcto y ticket creado correctamente' });
     } catch (error) {
         console.log(error);

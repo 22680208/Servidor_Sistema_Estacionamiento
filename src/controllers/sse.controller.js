@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { parkingSummary, reservationSummary } from '../utils/structureForResponse.js';
+import { parkingSummary, reservationSummary, ticketsSummary } from '../utils/structureForResponse.js';
 import {
   addSSEClient,
   removeSSEClient,
@@ -20,7 +20,6 @@ export const streamDashboard = async (req, res) => {
   });
 
   const initialData = await parkingSummary();
-
   res.write(
     `event: dashboard.updated\n` +
     `data: ${JSON.stringify({
@@ -56,6 +55,37 @@ export const streamReservation = async (req, res) => {
     `event: reservation.updated\n` +
     `data: ${JSON.stringify({
       message: 'conexion reservation establecida',
+      data: initialData,
+    })}\n\n`
+  );
+
+  const heartbeat = setInterval(() => {
+    res.write(': heartbeat\n\n');
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    removeSSEClient(clientId);
+  });
+};
+
+export const streamTicket = async (req, res) => {
+  const clientId = crypto.randomUUID();
+  const { id } = req.params;
+  res.writeHead(200, getSSEHeaders());
+  res.write('retry: 5000\n\n');
+
+  addSSEClient({
+    clientId,
+    res,
+    channels: ['ticket'],
+  });
+
+  const initialData = await ticketsSummary(id);
+  res.write(
+    `event: ticket.updated\n` +
+    `data: ${JSON.stringify({
+      message: 'conexion ticket establecida',
       data: initialData,
     })}\n\n`
   );

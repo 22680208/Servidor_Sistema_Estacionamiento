@@ -14,7 +14,7 @@ export const initReservationWorker = () => {
 			console.log("[Worker] Procesando tarea:", job.name);
 
 			if (job.name === "generate-access-code") {
-				const { reservationId } = job.data;
+				const { reservationId, userId } = job.data;
 				const code = nanoid();
 				let reservation;
 				do{
@@ -34,6 +34,15 @@ export const initReservationWorker = () => {
 				}while(reservation);
 
 				await Reservation.findByIdAndUpdate(reservationId, { code });
+				const reservationData = await reservationSummary(userId);
+				await publishRealtimeEvent({
+					channel: 'reservation',
+					event: 'reservation.updated',
+					payload: {
+						message: 'reserva auto-cancelada',
+						data: reservationData,
+					},
+				});
 				console.log(
 					`[Worker] Código ${code} asignado a reserva ${reservationId}`,
 				);
@@ -84,17 +93,6 @@ export const initReservationWorker = () => {
 					throw error; 
 				}
 			}
-
-			if (job.name === 'finished-reservation') {
-				const { reservationId } = job.data;
-				try {
-					
-				} catch (error) {
-					console.error(`[Worker] Error procesando finalizacion: ${error.message}`);
-					throw error; 
-				}
-			}
-
 		},
 		{ connection: redisConnection },
 	);
