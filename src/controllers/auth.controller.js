@@ -113,6 +113,22 @@ export const renovarToken = async (req, res) => {
     }
 };
 
+export const me = async (req, res) => {
+    try {
+        const userE = req.user;
+        const profile = await Profile.findOne({ userId: userE.userId }).lean();
+        if (!profile) return res.status(404).json({ message: 'Perfil no encontrado' });
+        const user = {
+            id: profile.userId.toString(),
+            firstName: profile.firstName,
+            lastName: profile.lastName
+        }
+        res.status(200).json( user );
+    } catch (error) {
+        return res.status(500).json({ message: 'Error en el servidor' });
+    }
+}
+
 export const profile = async (req, res) => {
     try {
         const userE = req.user;

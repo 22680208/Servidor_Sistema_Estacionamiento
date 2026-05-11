@@ -1,60 +1,25 @@
+import Place from "../../models/Place.js";
 import Ticket from "../../models/Ticket.js";
-import { publishSalida } from "../../services/mqttPublish.service.js";
-import { publishRealtimeEvent } from "../../services/realtime-pubsub.service.js";
-import { ticketsSummary } from "../../utils/structureForResponse.js";
+import { Queue } from 'bullmq';
+import redisConnection from '../../config/redis.js';
+import { publishEntrada } from "../../services/mqttPublish.service.js";
+const ticketQueue = new Queue('ticket-queue', { connection: redisConnection });
 
-const getDayRangeUTC = () => {
-    const ahora = new Date();
-
-    const startOfDay = new Date(Date.UTC(
-        ahora.getUTCFullYear(),
-        ahora.getUTCMonth(),
-        ahora.getUTCDate(),
-        0, 0, 0, 0
-    ));
-
-    const endOfDay = new Date(Date.UTC(
-        ahora.getUTCFullYear(),
-        ahora.getUTCMonth(),
-        ahora.getUTCDate(),
-        23, 59, 59, 999
-    ));
-
-    return { startOfDay, endOfDay };
-};
 export async function handleTicketMessage(payload) {
   try {
-    const code = String(payload).trim();
-    const { startOfDay, endOfDay } = getDayRangeUTC();
-    const ticket = await Ticket.findOne({
-    code: code,
-    state: 'pagado',
-    createdAt: {
-        $gte: startOfDay,
-        $lte: endOfDay
-    }
+    const newticket = await Ticket.create({
+        state: 'activo',
+        validationIn: true,
     });
-    if (!ticket) {
-      await publishSalida('CLOSE');
-      return;
-    }
-    ticket.state = 'finalizado';
-    await ticket.save();
-    if (ticket.userId) {
-      const ticketsData = await ticketsSummary(ticket.userId);
-      await publishRealtimeEvent({
-          channel: 'ticket',
-          event: 'ticket.updated',
-          payload: {
-              message: 'ticket actualizado',
-              data: ticketsData,
-          },
-      });
-    }
-    await publishSalida('OPEN');
+      await ticketQueue.add('generate-access-code-ticket-only', {
+        ticketId: newticket._id
+    }, {
+        attempts: 3,
+        backoff: 5000
+    });
+    await publishEntrada('OPEN');
   } catch (error) {
-    await publishSalida('CLOSE');
-    console.log(error)
+    await publishEntrada('CLOSE');
     console.error('Error handleTicketMessage:', error);
   }
 }

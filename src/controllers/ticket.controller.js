@@ -5,6 +5,8 @@ import redisConnection from '../config/redis.js';
 const ticketQueue = new Queue('ticket-queue', { connection: redisConnection });
 import { customAlphabet } from 'nanoid';
 import { ticketsSummary } from '../utils/structureForResponse.js';
+import { publishRealtimeEvent } from '../services/realtime-pubsub.service.js';
+import Reservation from '../models/Reservation.js';
 
 const nanoid = customAlphabet('1234567890', 6);
 
@@ -78,11 +80,14 @@ export const associateUserTicket = async (req, res) => {
             return res.status(400).json({ message: 'Todos los campos son requeridos'});
         }
 
-        const place = await Place.findOne({
-            _id: placeId,
+        const placeUsed = await Ticket.distinct('placeId');
+        const list = await Place.find({
+            _id: { $nin: placeUsed },
             state: 'ocupado'
-        });
-        if (!place) {
+        })
+
+        const exist = list.some(place => place._id.equals(placeId));
+        if (!exist) {
             return res.status(404).json({ message: 'Lugar libre' });
         }
 
@@ -103,9 +108,22 @@ export const associateUserTicket = async (req, res) => {
         ticket.carId = carId;
         ticket.userId = userId;
 
-        ticket.save();
+        await ticket.save();
+
+        const ticketsData = await ticketsSummary(ticket.userId);
+        await publishRealtimeEvent({
+            channel: 'ticket',
+            event: 'ticket.updated',
+            payload: {
+                message: 'ticket actualizado',
+                data: ticketsData,
+            },
+        });
+
+        
         return res.sendStatus(200);
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ message: 'Error al crear el Ticket' });
     }
 }
@@ -192,7 +210,7 @@ export const payTicket = async (req, res) => {
         });
 
         ticket.state = 'pagado';
-        ticket.save();
+        await ticket.save();
         const ticketsData = await ticketsSummary(ticket.userId);
         await publishRealtimeEvent({
             channel: 'ticket',
@@ -223,12 +241,7 @@ export const closeTicket = async (req, res) => {
         });
         if (!ticket) return res.status(404).json({ data: ticket, message: 'Ticket no encontrado' });
         ticket.state = 'finalizado';
-        ticket.save();
-        await ticketQueue.add('leave-parking',
-        {
-            attempts: 3,
-            backoff: 5000
-        });
+        await ticket.save();
         return res.sendStatus(200);
     } catch (error) {
         console.log(error);

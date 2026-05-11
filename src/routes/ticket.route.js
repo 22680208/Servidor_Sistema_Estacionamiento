@@ -7,7 +7,9 @@ const router = express.Router();
 router.get('/create-only-ticket', ticketOnly);
 router.get('/', verifyToken, getTickets);
 router.get('/:id', verifyToken, getTicketsUser);
-router.post('/associate-user-ticket', verifyToken, associateUserTicket);
+router.post('/associate-user-ticket', 
+    // verifyToken, 
+    associateUserTicket);
 router.post('/calculate', verifyToken, calculateTicket);
 router.post('/pay', verifyToken, payTicket);
 router.post('/close', verifyToken, closeTicket);

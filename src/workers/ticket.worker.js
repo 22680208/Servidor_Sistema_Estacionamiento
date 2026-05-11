@@ -4,6 +4,7 @@ import Ticket from '../models/Ticket.js';
 import { customAlphabet } from 'nanoid';
 import { sendAuthCode, sendLeave } from '../services/mqttService.js';
 import { ticketsSummary } from "../utils/structureForResponse.js";
+import { publishDisplay } from "../services/mqttPublish.service.js";
 
 const TOPIC_ESP32 = 'parking/v1/esp32/access';
 const LEAVE_ESP32 = 'parking/v1/esp32/leave';
@@ -70,7 +71,7 @@ export const initTicketWorker = () => {
 
                 await Ticket.findByIdAndUpdate(ticketId, { code });
 
-                sendAuthCode(TOPIC_ESP32, code);
+                await publishDisplay(code)
                 
                 console.log(
                     `[Worker] Código ${code} asignado a ticket ${ticketId}`,
