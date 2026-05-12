@@ -70,15 +70,7 @@ export const register = async (req, res) => {
         newUser.refreshToken = refreshToken;
         await newUser.save();
         await newProfile.save();
-        return res.status(201).json({
-            accessToken,
-            refreshToken,
-            user: {
-                id: newUser._id,
-                name: newUser.name,
-                role: newUser.role
-            }
-        });
+        return res.sendStatus(201);
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Error al registrar el usuario' });
