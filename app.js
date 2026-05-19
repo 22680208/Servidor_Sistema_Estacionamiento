@@ -39,6 +39,7 @@ const corsOptions = {
   credentials: true 
 };
 const frontendPath = path.join(__dirname, 'client/dist');
+const apkPath = path.join(frontendPath, 'downloads', 'app-release.apk');
 
 app.get('/', (_req, res) => {
   res.redirect('/welcome');
@@ -47,6 +48,10 @@ app.use('/welcome', express.static(frontendPath));
 
 app.get('/welcome', (_req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
+});
+
+app.get('/downloads/app-release.apk', (_req, res) => {
+  res.download(apkPath, 'app-release.apk');
 });
 app.use(cors(corsOptions));
 app.use(express.json());
