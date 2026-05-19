@@ -10,9 +10,11 @@ import dashboardRoute from './src/routes/dashboard.route.js';
 import accessRoutes from './src/routes/access.route.js';
 import parkingRoutes from './src/routes/sse.route.js'
 import { subscribeRealtimeEvents } from './src/services/realtime-pubsub.service.js';
-
+import path from 'path';
+import { fileURLToPath } from 'url';
 import cors from 'cors'
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import 'dotenv/config';
 
@@ -20,7 +22,8 @@ connectDB();
 subscribeRealtimeEvents();
 const app = express()
 const whitelist = [
-  'http://localhost:64189',
+  'http://localhost:5173',
+  'https://servidor-sistema-estacionamiento.onrender.com'
 ];
 
 const corsOptions = {
@@ -35,7 +38,16 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true 
 };
+const frontendPath = path.join(__dirname, 'client/dist');
 
+app.get('/', (_req, res) => {
+  res.redirect('/welcome');
+});
+app.use('/welcome', express.static(frontendPath));
+
+app.get('/welcome', (_req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
